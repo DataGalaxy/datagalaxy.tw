@@ -3,11 +3,19 @@
 ## 介紹
 本篇文章主要介紹如何建置一個 Hadoop cluster 基本操作環境，在進入如何安裝 Hadoop cluster 安裝之前，先簡單說明 Hadoop 的架構、運作方式，因為先了解這些之後，在後面安裝、設定時，會更清楚為何要做這些設定，所以建議可以先了解基本的 Hadoop 架構，再進入安裝、設定會更清楚。
 
+### HDFS
+
 在 Hadoop 中最核心的部分為 Hadoop Distributed File System (HDFS)，是一個分散式的檔案系統，能提供可擴展、信賴的檔案系統，主要是負責將資料分散的儲存到不同的節點主機上，並且能避免某一節點主機失效造成資料遺失的情況。
 
-以本篇文章實作來說，HDFS 由 1 個 NameNode 主機與多個 DataNodes 主機組成，NameNode 負責管理檔案的 metadata，如檔案的權限、建立日期等，而 DataNodes 提供資料儲存。
+以本篇文章實作來說，HDFS 由 1 個 NameNode 主機與多個 DataNodes 主機組成，NameNode 負責管理 HDFS 中的 metadata，如檔案的權限、建立日期等，而 DataNodes 提供資料儲存。
+
+以圖 1 所示，有一份檔案儲存在 HDFS 中，NameNode 會把這一份檔案分成多個 blocks，分散儲存在 DataNodes 中，所以，NameNode 需要紀錄哪一個檔案的 block 儲存在哪些 DataNodes 中，此外，為了避免單一個 DataNode 損壞造成資料遺失，NameNode 還需要將 blocks 的複本儲存到不同的 DataNodes 中做備份。
 
 // 圖
+
+### MapReduce
+
+// YARN
 
 ## 實作環境
 
@@ -49,6 +57,8 @@ ACCEPT     all  --  XXX.XXX.XXX.XXX      anywhere
 [datagalaxy@hadoop01 ~]$ sudo servie iptables restart
 ```
 
+請將上面的 `XXX.XXX.XXX.XXX` 替換成自己的 IP 位址
+
 #### 關閉 SELinux
 
 ##### 方法 1. 暫時關閉 SELinux
@@ -83,6 +93,18 @@ SELINUX=disabled
 
 * **master node:** hadoop01
 * **slave nodes:** hadoop02, hadoop03
+
+```
+[datagalaxy@hadoop01 ~]$ vi /etc/hosts
+```
+
+加入以下內容：
+
+```
+192.168.1.1    hadoop01
+192.168.1.2    hadoop02
+192.168.1.3    hadoop03
+```
 
 #### SSH keys
 在 Hadoop 中，每個 node 需要利用 SSH 連線，所以需要使用 SSH keys 來進行登入驗證。
@@ -186,6 +208,60 @@ Apache Hadoop 的設定檔位於解開 tar 中目錄的 `etc/hadoop/`，以這�
 
 
 以下的設定檔先修改 master node 中的設定，修改完之後再複製到其他 slave nodes 中。
+
+#### 1. 加入 NameNode URI (core-site.xml)
+
+```
+[hadoop@hadoop01 ~]$ cd ~/hadoop/etc/hadoop
+[hadoop@hadoop01 ~]$ vi core-site.xml
+```
+
+在 `core-site.xml` 中加入設定如下：
+
+```
+<configuration>
+  <property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://hadoop01:9000/</value>
+  </property>
+</configuration>
+```
+
+##### 參數說明：
+
+* `fs.defaultFS` : 設定 NameNode URI，其中 `hadoop01` 為 NameNode 的主機名稱 
+
+#### 2. 設定 HDFS (hdfs-site.xml)
+
+在 `etc/hadoop/hdfs-site.xml` 中設定 HDFS 的參數，包括 NameNode 與 DataNode 的儲存路徑等
+
+在 `hdfs-site.xml` 中加入以下設定：
+
+```
+<configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>3</value>
+  </property>
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>/home/hadoop/datanode</value>
+  </property>
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>/home/hadoop/namenode</value>
+  </property>
+</configuration>
+```
+
+##### 參數說明：
+
+* `dfs.replication`: block 備份的數量
+* `dfs.datanode.data.dir`: DataNode 儲存 block 的路徑
+* `dfs.namenode.name.dir`: NameNode 儲存 name table 的路徑
+
+#### 設定 YARN (yarn-site.xml)
+
 
 ### 更多關於 Hadoop 的設定
 

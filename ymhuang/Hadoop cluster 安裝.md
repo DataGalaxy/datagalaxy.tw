@@ -16,11 +16,14 @@
 ### MapReduce
 MapReduce 能提供處理大量資料的軟體框架，分別藉由 *Map* 與 *Reduce* 兩個 procedures 達成。*Map* 能把大量的資料區分成多個獨立的資料集，送到 cluster 中平行執行，*Reduce* 是利用 *Map* procedure 產生排序、過濾後的輸出進行加總產生出最後的結果。
 
-在 Hadoop 0.23 之後的版本都是使用 **MapReduce 2.0** (簡稱 **YARN** 或 **MRv**2)，YARN 修改了之前 MapReduce 的架構。
+在 Hadoop 0.23 之後的版本都是使用 **MapReduce 2.0** (又稱 **YARN** 或 **MR v2**)，YARN 修改了之前 MapReduce 的架構。
 
-在下面說明 YARN 的架構：
+在下面簡單描述 YARN 如何運作，YARN 中主要有一個 **ResourceManager**，在 nodes 中有 **NodeManager**, **ApplicationManager** 以及 **Container**。
 
-// YARN
+* **ResourceManager** : 主要負責管控 cluster 中 nodes 的資源、接收來自 client 的工作 (Job, 是指要交由 MapReduce 運算的工作) 和 nodes 協調
+* **NodeManager** : 負責監控 container 的資源使用，並且將所在的 node 狀態回報告給 ResourceManager
+* **ApplicationManager** : 每一個 application ()
+* **Container** : 在 YARN 中為了方便配置
 
 ## 實作環境
 

@@ -14,6 +14,11 @@
 // 圖
 
 ### MapReduce
+MapReduce 能提供處理大量資料的軟體框架，分別藉由 *Map* 與 *Reduce* 兩個 procedures 達成。*Map* 能把大量的資料區分成多個獨立的資料集，送到 cluster 中平行執行，*Reduce* 是利用 *Map* procedure 產生排序、過濾後的輸出進行加總產生出最後的結果。
+
+在 Hadoop 0.23 之後的版本都是使用 **MapReduce 2.0** (簡稱 **YARN** 或 **MRv**2)，YARN 修改了之前 MapReduce 的架構。
+
+在下面說明 YARN 的架構：
 
 // YARN
 

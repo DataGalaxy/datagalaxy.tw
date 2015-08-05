@@ -16,14 +16,14 @@
 ### MapReduce
 MapReduce 能提供處理大量資料的軟體框架，分別藉由 *Map* 與 *Reduce* 兩個 procedures 達成。*Map* 能把大量的資料區分成多個獨立的資料集，送到 cluster 中平行執行，*Reduce* 是利用 *Map* procedure 產生排序、過濾後的輸出進行加總產生出最後的結果。
 
-在 Hadoop 0.23 之後的版本都是使用 **MapReduce 2.0** (又稱 **YARN** 或 **MR v2**)，YARN 修改了之前 MapReduce 的架構。
+在 Hadoop 0.23 之後的版本都是使用 **MapReduce 2.0** (又稱 **YARN** 或 **MRv2**)，YARN 修改了之前 MapReduce 的架構。
 
-在下面簡單描述 YARN 如何運作，YARN 中主要有一個 **ResourceManager**，在 nodes 中有 **NodeManager**, **ApplicationManager** 以及 **Container**。
+在下面簡單描述 YARN 如何運作，YARN 中主要有一個 **ResourceManager**，nodes 中分別有 **NodeManager**, **ApplicationMaster** 以及 **Container**：
 
 * **ResourceManager** : 主要負責管控 cluster 中 nodes 的資源、接收來自 client 的工作 (Job, 是指要交由 MapReduce 運算的工作) 和 nodes 協調
 * **NodeManager** : 負責監控 container 的資源使用，並且將所在的 node 狀態回報告給 ResourceManager
-* **ApplicationManager** : 每一個 application ()
-* **Container** : 在 YARN 中為了方便配置
+* **ApplicationMaster** : 每一個 application 送到 ResourceManager 後，ResourceManager 會啟動一個 ApplicationMaster 負責執行、監控和 ResourceManager 協調執行 application 所需的資源
+* **Container** : 在 YARN 中將 application 所需的配置資源利用 Container 來區分，如上面所提到的，ApplicationMaster 會與 ResourceManager 協調資源，完成後，啟動 Container  來執行 application
 
 ## 實作環境
 
@@ -39,6 +39,8 @@ MapReduce 能提供處理大量資料的軟體框架，分別藉由 *Map* 與 *R
 
 ## 準備安裝
 這次安裝實作的作業系統以 CentOS 6.6 為主，在進入安裝之前，有一些前置步驟需要先完成，在之後進行安裝、設定 Hadoop cluster 時候會降低遇到一些問題。
+
+**注意：此部分準備安裝的操作，是對所有 Nodes**
 
 #### 校時
 因為 Hadoop cluster 是由多個節點 (nodes) 組成的分散式環境，所以需要同步每個 node 的系統時間，能直接與網路上的 NTP server 同步系統時間，或者把某一個節點作為 NTP server，其他的節點都向 cluster 內的 NTP server 進行校時。本篇文章並不著重在 NTP 校時的設定上，所以就不對其細節進行說明。
@@ -168,7 +170,7 @@ Apache Hadoop 是由 Java 語言開發，所以主機節點需安裝 Java，Hado
 
 Apache Hadoop 下載網址：[http://hadoop.apache.org/releases.html]()
 
-### 安裝 JDK
+### 安裝 JDK (所有 Nodes)
 主要有兩種安裝方式：
 
 #### 1. Oracle Java
@@ -195,7 +197,7 @@ Java(TM) SE Runtime Environment (build 1.7.0_79-b15)
 Java HotSpot(TM) 64-Bit Server VM (build 24.79-b02, mixed mode)
 ```
 
-### 下載 Apache Hadoop Binary 檔案
+### 下載 Apache Hadoop Binary 檔案 (所有 Nodes)
 
 ```
 [hadoop@hadoop01 ~]$ wget http://ftp.mirror.tw/pub/apache/hadoop/common/hadoop-2.7.1/hadoop-2.7.1.tar.gz
@@ -213,7 +215,7 @@ Apache Hadoop 的設定檔位於解開 tar 中目錄的 `etc/hadoop/`，以這�
 * **hdfs-site.xml** : HDFS NameNode 與 DataNode 的其他設定
 * **yarn-site.xml** : YARN 架構中的 components，如 ResourceManager、NodeManager 等及其他參數設定
 * **mapred-site.xml** : MapReduce 的參數設定
-
+* **slaves** : 儲存 slaves nodes 主機位置
 
 以下的設定檔先修改 master node 中的設定，修改完之後再複製到其他 slave nodes 中。
 
@@ -268,17 +270,105 @@ Apache Hadoop 的設定檔位於解開 tar 中目錄的 `etc/hadoop/`，以這�
 * `dfs.datanode.data.dir`: DataNode 儲存 block 的路徑
 * `dfs.namenode.name.dir`: NameNode 儲存 name table 的路徑
 
-#### 設定 YARN (yarn-site.xml)
+#### 3. 設定 YARN (yarn-site.xml)
 
+在 `etc/hadoop/yarn-site.xml` 中主要是 YARN components 的相關設定：
+
+在 `yarn-site.xml` 加入以下設定：
+
+```
+<configuration>
+  <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>hadoop01</value> <!-- master node hostname -->
+  </property>
+</configuration>
+```
+
+參數說明：
+
+* `yarn.resourcemanager.hostname` : 在一開始介紹中的 MapReduece 中有提到 ResourceManager 是負責分配工作所需的資源，設定 ResourceManager 所在的 node
+
+#### 4. 設定 MapReduce (mapred-site.xml)
+
+`etc/hadoop/mapred-site.xml` 是對 MapReduce 的相關設定：
+
+```
+<configuration>
+  <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+  </property>
+  <property>
+    <name>mapreduce.jobhistory.address</name>
+    <value>hadoop01:10020</value>
+  </property>
+  <property>
+   <name>mapreduce.jobhistory.webapp.address</name>
+   <value>hadoop01:19888</value>
+  </property>
+</configuration>
+```
+
+參數說明：
+
+* `mapreduce.framework.name` : MapReduce 所使用的 Framework 名稱
+* `mapreduce.jobhistory.address` : 儲存、蒐集執行過的歷史工作 (Job) 紀錄的主機
+* `mapreduce.jobhistory.webapp.address` : 顯示歷史工作記錄的 Web 主機及 port 
+
+#### 5. 設定 Slave nodes (slaves)
+
+### 部署設定檔到所有 Nodes
+
+上面的設定檔設定，都是先在 master 上做修改，接下來利用 `scp` 複製在 master node 修改的設定檔到所有 nodes 中：
+
+```
+[hadoop@hadoop01 ~]$ scp -r hadoop hadoop02:~
+[hadoop@hadoop01 ~]$ scp -r hadoop hadoop03:~
+```
+
+### Hadoop 環境變數
+
+把 Hadoop 相關的環境變數加到 hadoop 使用者中，在使用指令時，可以不用輸入完整路徑的指令。
+
+編輯 `~/.bashrc`，加入以下環境變數：
+
+```
+export JAVA_HOME=/usr/java/default
+export PATH=$PATH:/usr/java/default
+export HADOOP_PREFIX=/home/hadoop/hadoop
+export HADOOP_HOME=$HADOOP_PREFIX
+export HADOOP_COMMON_HOME=$HADOOP_PREFIX
+export HADOOP_CONF_DIR=$HADOOP_PREFIX/etc/hadoop
+export HADOOP_HDFS_HOME=$HADOOP_PREFIX
+export HADOOP_MAPRED_HOME=$HADOOP_PREFIX
+export HADOOP_YARN_HOME=$HADOOP_PREFIX
+export PATH=$PATH:$HADOOP_PREFIX/sbin:$HADOOP_PREFIX/bin
+```
 
 ### 更多關於 Hadoop 的設定
 
+上面所介紹的只是基本的設定，也就是架設 Hadoop cluster 可執行的環境，讓所有 Nodes 之間能相互溝通，如果想要瞭解更多的設定，能參考以下資料：
+
+* **core-site.xml** : [https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/hadoop-common/core-default.xml]()
+* **hdfs-site.xml** : [https://hadoop.apache.org/docs/r.2.7.1/hadoop-project-dist/hadoop-hdfs/hdfs-default.xml]()
+* **yarn-site.xml** : [https://hadoop.apache.org/docs/r2.7.1/hadoop-yarn/hadoop-yarn-common/yarn-default.xml]()
+* **mapred-site.xml** : [https://hadoop.apache.org/docs/r.2.7.1/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml]()
+
 ## 啟動 Hadoop
 
+### 執行 Hadoop 相關 Daemon
+
 ### 測試
+
+```
+[hadoop@hadoop01 ~]$ hadoop jar /home/hadoop/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.1.jar teragen 100 /test/10gsort/input
+[hadoop@hadoop01 ~]$ hadoop jar /home/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.1.jar terasort /test/10gsort/input /test/10gsort/output
+```
 
 ## 關閉 Hadoop
 
 ## 常見問題
 ##### 1. 執行程式時常會噴出 xxx
 ##### 2. 執行失敗該怎麼除錯
+##### 3. No Route to Host 相關訊息

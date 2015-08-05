@@ -1,0 +1,28 @@
+
+
+
+
+<head>
+	{% include head.html %}
+	<link href="{{ site.baseurl }}/css/hc.css" rel="stylesheet">
+	<link href="{{ site.baseurl }}/css/hc_custom.css" rel="stylesheet">
+
+	<script src="{{ site.baseurl }}/js/hc.js"></script>
+</head>
+
+<body>
+	<div class="nav-toggle"><i class="fa fa-bars fa-2x"></i> Herring Cove </div>
+	<div id = "wrapper">
+	  {%include navigation.html %}
+	  
+	  <div class="container post-container">
+
+	    {{ content }}
+	  </div>
+	  {% include footer.html %}
+	</div>
+</body>
+
+
+
+

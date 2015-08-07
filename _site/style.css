@@ -374,5 +374,16 @@ body {
 }
 
 
+.container{
+	margin: none;
+}
+
+#category-title{
+	font-size: 25px;
+}
+
+
+
+
 
 

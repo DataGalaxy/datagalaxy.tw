@@ -331,7 +331,7 @@ Apache Hadoop 的設定檔位於解開 tar 中目錄的 `etc/hadoop/`，以這�
 
 把 Hadoop 相關的環境變數加到 hadoop 使用者中，在使用指令時，可以不用輸入完整路徑的指令。
 
-編輯 `~/.bashrc`，加入以下環境變數：
+編輯 `~/.bashrc`，加入以下環境變數： // 還沒完成
 
 ```
 export JAVA_HOME=/usr/java/default
